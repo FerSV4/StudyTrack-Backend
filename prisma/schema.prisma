@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model academic_terms {
+  id         BigInt     @id @default(autoincrement())
+  user_id    String     @db.Uuid
+  name       String     @db.VarChar(100)
+  start_date DateTime   @db.Date
+  end_date   DateTime   @db.Date
+  is_active  Boolean?   @default(true)
+  created_at DateTime?  @default(now()) @db.Timestamptz(6)
+  users      users      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  subjects   subjects[]
+
+  @@index([user_id], map: "idx_terms_user")
+}
+
+model study_sessions {
+  id           BigInt    @id @default(autoincrement())
+  task_id      BigInt
+  start_time   DateTime  @db.Timestamptz(6)
+  end_time     DateTime? @db.Timestamptz(6)
+  is_completed Boolean?  @default(false)
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  tasks        tasks     @relation(fields: [task_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([task_id], map: "idx_sessions_task")
+}
+
+model subjects {
+  id             BigInt         @id @default(autoincrement())
+  term_id        BigInt
+  name           String         @db.VarChar(150)
+  color_code     String?        @default("#808080") @db.Char(7)
+  created_at     DateTime?      @default(now()) @db.Timestamptz(6)
+  academic_terms academic_terms @relation(fields: [term_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tasks          tasks[]
+
+  @@index([term_id], map: "idx_subjects_term")
+}
+
+model tasks {
+  id              BigInt           @id @default(autoincrement())
+  subject_id      BigInt
+  title           String           @db.VarChar(200)
+  description     String?
+  status          task_status?     @default(pending)
+  priority        task_priority?   @default(medium)
+  due_date        DateTime         @db.Timestamptz(6)
+  estimated_hours Decimal?         @db.Decimal(5, 2)
+  created_at      DateTime?        @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime?        @default(now()) @db.Timestamptz(6)
+  study_sessions  study_sessions[]
+  subjects        subjects         @relation(fields: [subject_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([due_date], map: "idx_tasks_due_date")
+  @@index([status], map: "idx_tasks_status")
+  @@index([subject_id], map: "idx_tasks_subject")
+}
+
+model users {
+  id                String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email             String             @unique @db.VarChar(255)
+  password_hash     String             @db.VarChar(255)
+  full_name         String             @db.VarChar(150)
+  role              user_role?         @default(user)
+  subscription_tier subscription_type? @default(free)
+  timezone          String?            @default("America/La_Paz") @db.VarChar(50)
+  created_at        DateTime?          @default(now()) @db.Timestamptz(6)
+  academic_terms    academic_terms[]
+}
+
+enum subscription_type {
+  free
+  pro
+}
+
+enum task_priority {
+  low
+  medium
+  high
+}
+
+enum task_status {
+  pending
+  in_progress
+  completed
+}
+
+enum user_role {
+  admin
+  user
+}
