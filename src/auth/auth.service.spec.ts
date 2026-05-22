@@ -40,39 +40,36 @@ describe('AuthService', () => {
     jest.clearAllMocks();
   });
 
-  it('debería estar definido', () => {
+  it('el servicio debe instanciarse correctamente', () => {
     expect(service).toBeDefined();
   });
 
-  //LOGIN
+  //PRUEBA LOGIN
 
-  it('debería retornar un access_token cuando el login es exitoso', async () => {
-    const dto = { email: 'test@estudio.com', password: 'password123' };
+  it('permite iniciar sesión y entrega un token si las credenciales de la universidad son correctas', async () => {
+    const dto = { email: 'marcelo.justiniano@ucb.edu.bo', password: 'MiPasswordSeguro123' };
     const realHash = await bcrypt.hash(dto.password, 10);
-
     const mockUser = {
-      id: 'uuid-123',
+      id: 'uuid-estudiante-001',
       email: dto.email,
       password_hash: realHash,
-      role: 'admin',
+      role: 'user',
     };
 
     mockPrismaService.users.findUnique.mockResolvedValue(mockUser);
-    mockJwtService.sign.mockReturnValue('jwt_token_generado');
+    mockJwtService.sign.mockReturnValue('jwt_token_valido');
 
     const result = await service.login(dto);
 
     expect(mockPrismaService.users.findUnique).toHaveBeenCalledWith({ where: { email: dto.email } });
-    expect(result).toEqual({ access_token: 'jwt_token_generado' });
+    expect(result).toEqual({ access_token: 'jwt_token_valido' });
   });
 
-  it('debería lanzar UnauthorizedException si la contraseña es incorrecta', async () => {
-    const dto = { email: 'test@estudio.com', password: 'wrongpassword' };
-    
-    const realHash = await bcrypt.hash('password_correcta', 10);
-
+  it('bloquea el acceso y lanza una alerta si el estudiante ingresa mal su contraseña', async () => {
+    const dto = { email: 'marcelo.justiniano@ucb.edu.bo', password: 'clave_equivocada' };
+    const realHash = await bcrypt.hash('clave-correcta', 10);
     const mockUser = {
-      id: 'uuid-123',
+      id: 'uuid-estudiante-001',
       email: dto.email,
       password_hash: realHash,
       role: 'user',
@@ -83,19 +80,19 @@ describe('AuthService', () => {
     await expect(service.login(dto)).rejects.toThrow(UnauthorizedException);
   });
 
-  //REGISTER
+  //PRUEBA REGISTRO
 
-  it('debería registrar un usuario nuevo, encriptar la contraseña y retornar un token', async () => {
-    const dto = { email: 'nuevo@estudio.com', password: '123', fullName: 'Juan Perez' };
+  it('crea una cuenta nueva, protege la contraseña con un hash y autentica al usuario', async () => {
+    const dto = { email: 'camila.vargas@ucb.edu.bo', password: 'NuevaClave', fullName: 'Camila Vargas' };
     const mockCreatedUser = {
-      id: 'uuid-999',
+      id: 'uuid-estudiante-002',
       email: dto.email,
       role: 'user',
     };
 
     mockPrismaService.users.findUnique.mockResolvedValue(null);
     mockPrismaService.users.create.mockResolvedValue(mockCreatedUser);
-    mockJwtService.sign.mockReturnValue('token_registro');
+    mockJwtService.sign.mockReturnValue('token_de_bienvenida');
 
     const result = await service.register(dto);
 
@@ -106,21 +103,22 @@ describe('AuthService', () => {
         full_name: dto.fullName,
       }
     });
-    expect(result).toEqual({ access_token: 'token_registro' });
+    expect(result).toEqual({ access_token: 'token_de_bienvenida' });
   });
 
-  it('debería lanzar ConflictException si el email de registro ya existe', async () => {
-    const dto = { email: 'existe@estudio.com', password: '123', fullName: 'Juan' };
-    mockPrismaService.users.findUnique.mockResolvedValue({ id: '1' });
+  it('evita crear cuentas duplicadas si un estudiante intenta registrarse con un correo que ya existe', async () => {
+    const dto = { email: 'ya.registrado@ucb.edu.bo', password: '123', fullName: 'Estudiante Antiguo' };
+    
+    mockPrismaService.users.findUnique.mockResolvedValue({ id: 'uuid-existente' });
 
     await expect(service.register(dto)).rejects.toThrow(ConflictException);
   });
 
-  //PERFIL
+  //PRUEBA PERFIL
 
-  it('debería retornar el perfil del usuario si existe', async () => {
-    const userId = 'uuid-123';
-    const mockProfile = { id: userId, email: 'test@estudio.com', full_name: 'Test' };
+  it('devuelve los datos públicos del perfil cuando se solicita un ID válido', async () => {
+    const userId = 'uuid-estudiante-003';
+    const mockProfile = { id: userId, email: 'rodrigo.saucedo@ucb.edu.bo', full_name: 'Rodrigo Saucedo' };
 
     mockPrismaService.users.findUnique.mockResolvedValue(mockProfile);
 
@@ -128,8 +126,8 @@ describe('AuthService', () => {
     expect(result).toEqual(mockProfile);
   });
 
-  it('debería lanzar NotFoundException si el perfil no existe', async () => {
-    const userId = 'uuid-fantasma';
+  it('arroja un error de no encontrado si se intenta consultar el perfil de un usuario fantasma', async () => {
+    const userId = 'uuid-inexistente';
     mockPrismaService.users.findUnique.mockResolvedValue(null);
 
     await expect(service.getUserProfile(userId)).rejects.toThrow(NotFoundException);
