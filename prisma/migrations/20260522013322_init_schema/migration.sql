@@ -1,3 +1,4 @@
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- CreateEnum
 CREATE TYPE "subscription_type" AS ENUM ('free', 'pro');
 
