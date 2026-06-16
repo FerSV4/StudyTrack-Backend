@@ -5,9 +5,9 @@ export class UpdateTaskDto {
   @IsOptional()
   title?: string;
 
-  @IsString()
+  @IsNumber()
   @IsOptional()
-  subjectId?: string;
+  subjectId?: number;
 
   @IsString()
   @IsOptional()
