@@ -30,6 +30,14 @@ export class AuthService {
       },
     });
 
+    await this.prisma.audit_logs.create({
+      data: {
+        user_id: user.id,
+        action: 'REGISTRO',
+        details: `Nuevo usuario registrado: ${user.email}`,
+      },
+    });
+
     return this.generateToken(user.id, user.email, user.role ?? 'user');
   }
 
@@ -39,14 +47,36 @@ export class AuthService {
     });
 
     if (!user) {
+      await this.prisma.audit_logs.create({
+        data: {
+          user_id: null,
+          action: 'LOGIN_FALLIDO',
+          details: `Intento de acceso con correo inexistente: ${dto.email}`,
+        },
+      });
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const isPasswordValid = await bcrypt.compare(dto.password, user.password_hash);
 
     if (!isPasswordValid) {
+      await this.prisma.audit_logs.create({
+        data: {
+          user_id: user.id,
+          action: 'LOGIN_FALLIDO',
+          details: `Contraseña incorrecta para el correo: ${dto.email}`,
+        },
+      });
       throw new UnauthorizedException('Invalid credentials');
     }
+
+    await this.prisma.audit_logs.create({
+      data: {
+        user_id: user.id,
+        action: 'LOGIN_EXITOSO',
+        details: `Inicio de sesión exitoso`,
+      },
+    });
 
     return this.generateToken(user.id, user.email, user.role ?? 'user');
   }
@@ -57,6 +87,7 @@ export class AuthService {
       access_token: this.jwtService.sign(payload),
     };
   }
+
   async getUserProfile(userId: string) {
     const user = await this.prisma.users.findUnique({
       where: { id: userId },
@@ -70,7 +101,9 @@ export class AuthService {
         created_at: true,
       },
     });
+    
     if (!user) throw new NotFoundException('Usuario no encontrado');
+    
     return user;
-}
+  }
 }

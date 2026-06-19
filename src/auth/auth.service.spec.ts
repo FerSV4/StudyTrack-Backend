@@ -16,6 +16,9 @@ describe('AuthService', () => {
       findUnique: jest.fn(),
       create: jest.fn(),
     },
+    audit_logs: {
+      create: jest.fn(),
+    },
   };
 
   const mockJwtService: any = {

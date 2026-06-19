@@ -5,6 +5,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { TermsModule } from './terms/terms.module';
 import { SubjectsModule } from './subjects/subjects.module';
 import { StudySessionsModule } from './study-sessions/study-sessions.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { StudySessionsModule } from './study-sessions/study-sessions.module';
     TermsModule,
     SubjectsModule,
     StudySessionsModule,
+    AdminModule,
   ],
 })
 export class AppModule {}
